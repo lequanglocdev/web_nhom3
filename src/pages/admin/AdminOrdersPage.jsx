@@ -6,11 +6,19 @@ const STATUS_CONFIG = {
   PENDING: { label: "Chờ xác nhận", color: "#f59e0b", bg: "#fef3c7" },
   UNPAID: { label: "Chờ thanh toán", color: "#3b82f6", bg: "#dbeafe" },
   PAID: { label: "Đã thanh toán", color: "#10b981", bg: "#d1fae5" },
+  SHIPPING: { label: "Đang vận chuyển", color: "#8b5cf6", bg: "#ede9fe" }, // ✅
+  DELIVERED: { label: "Đã giao hàng", color: "#059669", bg: "#d1fae5" }, // ✅
   CANCELLED: { label: "Đã hủy", color: "#ef4444", bg: "#fee2e2" },
 };
 
-const ALL_STATUSES = ["PENDING", "UNPAID", "PAID", "CANCELLED"];
-
+const ALL_STATUSES = [
+  "PENDING",
+  "UNPAID",
+  "PAID",
+  "SHIPPING",
+  "DELIVERED",
+  "CANCELLED",
+];
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -341,38 +349,71 @@ export default function AdminOrdersPage() {
                       {fmtDate(order.orderDate)}
                     </td>
                     <td style={{ padding: "13px 16px" }}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        {/* Xem chi tiết */}
+                      <div
+                        style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         <button
                           onClick={() => setSelected(order)}
                           style={btnStyle("#3b82f6")}>
                           Chi tiết
                         </button>
-                        {/* Đổi trạng thái nhanh */}
-                        {order.status !== "CANCELLED" &&
-                          order.status !== "PAID" && (
-                            <select
+
+                        {/* COD: PENDING → cho phép vận chuyển hoặc hủy */}
+                        {order.status === "PENDING" && (
+                          <>
+                            <button
                               disabled={updating === order.id}
-                              value={order.status}
-                              onChange={(e) =>
-                                handleUpdateStatus(order.id, e.target.value)
+                              onClick={() =>
+                                handleUpdateStatus(order.id, "SHIPPING")
                               }
-                              style={{
-                                padding: "5px 8px",
-                                borderRadius: 8,
-                                fontSize: 12,
-                                border: "1.5px solid #e2e8f0",
-                                cursor: "pointer",
-                                background: "#fff",
-                                outline: "none",
-                              }}>
-                              {ALL_STATUSES.map((s) => (
-                                <option key={s} value={s}>
-                                  {STATUS_CONFIG[s].label}
-                                </option>
-                              ))}
-                            </select>
-                          )}
+                              style={btnStyle("#8b5cf6")}>
+                              🚚 Vận chuyển
+                            </button>
+                            <button
+                              disabled={updating === order.id}
+                              onClick={() =>
+                                handleUpdateStatus(order.id, "CANCELLED")
+                              }
+                              style={btnStyle("#ef4444")}>
+                              ✗ Hủy
+                            </button>
+                          </>
+                        )}
+
+                        {/* VNPay: UNPAID → chờ thanh toán, chỉ được hủy */}
+                        {order.status === "UNPAID" && (
+                          <button
+                            disabled={updating === order.id}
+                            onClick={() =>
+                              handleUpdateStatus(order.id, "CANCELLED")
+                            }
+                            style={btnStyle("#ef4444")}>
+                            ✗ Hủy
+                          </button>
+                        )}
+
+                        {/* Đã thanh toán VNPay → cho vận chuyển */}
+                        {order.status === "PAID" && (
+                          <button
+                            disabled={updating === order.id}
+                            onClick={() =>
+                              handleUpdateStatus(order.id, "SHIPPING")
+                            }
+                            style={btnStyle("#8b5cf6")}>
+                            🚚 Vận chuyển
+                          </button>
+                        )}
+
+                        {/* Đang vận chuyển → xác nhận đã giao */}
+                        {order.status === "SHIPPING" && (
+                          <button
+                            disabled={updating === order.id}
+                            onClick={() =>
+                              handleUpdateStatus(order.id, "DELIVERED")
+                            }
+                            style={btnStyle("#059669")}>
+                            ✅ Đã giao
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -531,42 +572,65 @@ export default function AdminOrdersPage() {
             </div>
 
             {/* Cập nhật trạng thái */}
-            {selected.status !== "CANCELLED" && selected.status !== "PAID" && (
-              <div style={{ marginTop: 20 }}>
-                <label
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "#374151",
-                    marginBottom: 8,
-                    display: "block",
-                  }}>
-                  Cập nhật trạng thái
-                </label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {ALL_STATUSES.filter((s) => s !== selected.status).map(
-                    (s) => (
+            {/* ✅ MỚI - chỉ ẩn khi CANCELLED hoặc DELIVERED */}
+            {selected.status !== "CANCELLED" &&
+              selected.status !== "DELIVERED" && (
+                <div style={{ marginTop: 20 }}>
+                  <label
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#374151",
+                      marginBottom: 8,
+                      display: "block",
+                    }}>
+                    Cập nhật trạng thái
+                  </label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {/* PAID → chỉ cho chuyển SHIPPING */}
+                    {selected.status === "PAID" ? (
                       <button
-                        key={s}
                         disabled={updating === selected.id}
-                        onClick={() => handleUpdateStatus(selected.id, s)}
+                        onClick={() =>
+                          handleUpdateStatus(selected.id, "SHIPPING")
+                        }
                         style={{
                           padding: "8px 16px",
                           borderRadius: 8,
                           border: "none",
-                          background: STATUS_CONFIG[s].bg,
-                          color: STATUS_CONFIG[s].color,
+                          background: STATUS_CONFIG["SHIPPING"].bg,
+                          color: STATUS_CONFIG["SHIPPING"].color,
                           fontWeight: 600,
                           fontSize: 13,
                           cursor: "pointer",
                         }}>
-                        {STATUS_CONFIG[s].label}
+                        🚚 Chuyển sang vận chuyển
                       </button>
-                    )
-                  )}
+                    ) : (
+                      ALL_STATUSES.filter((s) => s !== selected.status).map(
+                        (s) => (
+                          <button
+                            key={s}
+                            disabled={updating === selected.id}
+                            onClick={() => handleUpdateStatus(selected.id, s)}
+                            style={{
+                              padding: "8px 16px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: STATUS_CONFIG[s].bg,
+                              color: STATUS_CONFIG[s].color,
+                              fontWeight: 600,
+                              fontSize: 13,
+                              cursor: "pointer",
+                            }}>
+                            {STATUS_CONFIG[s].label}
+                          </button>
+                        )
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         </div>
       )}

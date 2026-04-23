@@ -11,3 +11,5 @@ export const orderDetail = (id) => api.get(`/user/orders/${id}`);
 
 // huỷ đơn
 export const cancelOrder = (id) => api.delete(`/user/orders/${id}/cancel`);
+
+export const confirmDelivered = (id) => api.put(`/user/orders/${id}/delivered`);

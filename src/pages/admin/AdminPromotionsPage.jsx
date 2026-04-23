@@ -471,7 +471,7 @@ export default function AdminPromotionsPage() {
                 alignItems: "center",
                 marginBottom: 24,
               }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>
                 {editItem ? "Sửa mã khuyến mãi" : "Tạo mã khuyến mãi mới"}
               </h2>
               <button

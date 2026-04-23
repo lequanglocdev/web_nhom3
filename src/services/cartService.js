@@ -15,6 +15,10 @@ export const removeItem = (id) => api.delete(`/user/cart/remove/${id}`);
 // clear cart
 export const clearCart = () => api.delete("/user/cart/clear");
 
+export const refreshCartEvent = () =>
+  window.dispatchEvent(new Event("cart-updated"));
+
+
 // apply mã
 export const applyPromo = (code) =>
   api.post("/user/cart/apply-promo", { code });

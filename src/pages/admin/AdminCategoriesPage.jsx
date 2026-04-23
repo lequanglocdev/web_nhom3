@@ -409,7 +409,7 @@ export default function AdminCategoriesPage() {
                 alignItems: "center",
                 marginBottom: 24,
               }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>
                 {editTarget ? "Sửa danh mục" : "Thêm danh mục mới"}
               </h2>
               <button
