@@ -9,7 +9,8 @@ import {
 } from "../../store/authSlice";
 import { logoutApi } from "../../services/authService";
 import { getCart } from "../../services/cartService";
-
+import { setUser } from "../../store/authSlice";
+import api from "../../lib/axios";
 export default function Navbar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -29,23 +30,23 @@ export default function Navbar() {
   }, []);
 
   // Load cart count
-useEffect(() => {
-  if (!isAuth) {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCartCount(0);
-    return;
-  }
+  useEffect(() => {
+    if (!isAuth) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCartCount(0);
+      return;
+    }
 
-  const loadCart = () =>
-    getCart()
-      .then((res) => setCartCount(res.data?.items?.length || 0))
-      .catch(() => {});
+    const loadCart = () =>
+      getCart()
+        .then((res) => setCartCount(res.data?.items?.length || 0))
+        .catch(() => {});
 
-  loadCart(); // load lần đầu
+    loadCart(); // load lần đầu
 
-  window.addEventListener("cart-updated", loadCart); // ✅ lắng nghe event
-  return () => window.removeEventListener("cart-updated", loadCart);
-}, [isAuth]);
+    window.addEventListener("cart-updated", loadCart); // ✅ lắng nghe event
+    return () => window.removeEventListener("cart-updated", loadCart);
+  }, [isAuth]);
 
   const handleLogout = async () => {
     try {
@@ -56,7 +57,14 @@ useEffect(() => {
     dispatch(clearAuth());
     navigate("/");
   };
+  useEffect(() => {
+    if (!isAuth || user?.fullName) return; // đã có rồi thì thôi
 
+    api
+      .get("/user/me")
+      .then(({ data }) => dispatch(setUser(data)))
+      .catch(() => {});
+  }, [isAuth]); // eslint-disable-line
   return (
     <header
       className="pc-navbar"

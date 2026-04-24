@@ -24,6 +24,7 @@ import AdminGuard from "../components/guards/AdminGuard";
 import UserGuard from "../components/guards/UserGuard";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import UserOrdersPage from "../pages/user/UserOrdersPage";
+import UserProfilePage from "../pages/user/UserProfilePage";
 // Wrapper để dùng AdminLayout với <Route element>
 function AdminRoute({ children }) {
   return <AdminLayout>{children}</AdminLayout>;
@@ -74,6 +75,14 @@ export default function AppRouter() {
             element={
               <UserGuard>
                 <UserOrdersPage />
+              </UserGuard>
+            }
+          />
+          <Route
+            path="/user/profile"
+            element={
+              <UserGuard>
+                <UserProfilePage />
               </UserGuard>
             }
           />
