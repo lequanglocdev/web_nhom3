@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearAuth, selectUser } from "../../store/authSlice";
 import { logoutApi } from "../../services/authService";
+import AdminChat from "../../pages/admin/AdminChat";
 
 const menuItems = [
   { path: "/admin/dashboard", icon: "bi-speedometer2", label: "Dashboard" },
@@ -171,6 +172,7 @@ export default function AdminLayout({ children }) {
       <main style={{ flex: 1, background: "#f5f6fa", overflowY: "auto" }}>
         {children}
       </main>
+      <AdminChat />
     </div>
   );
 }

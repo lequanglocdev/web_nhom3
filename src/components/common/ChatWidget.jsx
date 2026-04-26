@@ -1,16 +1,3 @@
-/**
- * ChatWidget - Floating real-time chat widget
- *
- * Cài thêm 2 thư viện trước khi dùng:
- *   npm install @stomp/stompjs sockjs-client
- *
- * Đặt component này vào MainLayout để hiện trên mọi trang:
- *   import ChatWidget from "../chat/ChatWidget";
- *   // trong JSX: <ChatWidget />
- *
- * SUPPORT_USER_ID: ID của admin/support trên hệ thống (sửa lại nếu cần)
- */
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { Client } from "@stomp/stompjs";
@@ -24,19 +11,21 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8081/api";
 const WS_URL = `${API_BASE}/ws`;
-const SUPPORT_USER_ID = 1; // ⭐ ID của admin/support — sửa lại nếu khác
+const SUPPORT_USER_ID = 1;
 
 function formatTime(ts) {
   if (!ts) return "";
-  const d = new Date(ts);
-  return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  return new Date(ts).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 async function fetchHistory(token, otherUserId) {
   const res = await fetch(`${API_BASE}/chat/history/${otherUserId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   return data.data || [];
 }
@@ -51,34 +40,43 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [unread, setUnread] = useState(0);
 
   const clientRef = useRef(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
-  // ── Auto-scroll ──────────────────────────────────────────────
+  // ✅ FIX: dùng ref để tránh stale closure trong STOMP callback
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Focus input on open ─────────────────────────────────────
+  // Focus + reset unread khi mở
   useEffect(() => {
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUnread(0);
+      setError(null);
       setTimeout(() => inputRef.current?.focus(), 200);
     }
   }, [open]);
 
-  // ── Connect WebSocket when widget opens ─────────────────────
+  // Connect WebSocket + load history
   useEffect(() => {
     if (!open || !isAuth || !token) return;
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
+    setError(null);
 
-    // 1. Load history
+    // ✅ FIX: catch lỗi và hiện thông báo thay vì nuốt lỗi
     fetchHistory(token, SUPPORT_USER_ID)
       .then((hist) => {
         setMessages(
@@ -90,17 +88,19 @@ export default function ChatWidget() {
           }))
         );
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("[Chat] Lỗi tải lịch sử:", err);
+        setError("Không tải được lịch sử chat. Vui lòng thử lại.");
+      })
       .finally(() => setLoading(false));
 
-    // 2. STOMP connect
     const stompClient = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
         setConnected(true);
-        stompClient.subscribe(`/user/queue/messages`, (frame) => {
+        stompClient.subscribe("/user/queue/messages", (frame) => {
           try {
             const msg = JSON.parse(frame.body);
             setMessages((prev) => [
@@ -112,14 +112,19 @@ export default function ChatWidget() {
                 isMine: msg.senderId !== SUPPORT_USER_ID,
               },
             ]);
-            if (!open) setUnread((u) => u + 1);
+            // ✅ FIX: đọc từ ref thay vì closure — luôn lấy giá trị mới nhất
+            if (!openRef.current) setUnread((u) => u + 1);
           } catch (e) {
-            console.error(e);
+            console.error("[Chat] Parse error:", e);
           }
         });
       },
       onDisconnect: () => setConnected(false),
-      onStompError: () => setConnected(false),
+      onStompError: (frame) => {
+        console.error("[Chat] STOMP error:", frame);
+        setConnected(false);
+        setError("Mất kết nối. Đang thử kết nối lại...");
+      },
     });
 
     stompClient.activate();
@@ -132,7 +137,6 @@ export default function ChatWidget() {
     };
   }, [open, isAuth, token]);
 
-  // ── Send message ────────────────────────────────────────────
   const sendMessage = useCallback(() => {
     const text = input.trim();
     if (!text || !connected || !clientRef.current) return;
@@ -153,13 +157,10 @@ export default function ChatWidget() {
     }
   };
 
-  // ── Render ──────────────────────────────────────────────────
   return (
     <div className="chat-widget">
-      {/* Panel */}
       {open && (
         <div className="chat-panel">
-          {/* Header */}
           <div className="chat-panel__header">
             <div className="chat-panel__avatar">💬</div>
             <div>
@@ -172,34 +173,23 @@ export default function ChatWidget() {
                   : "Chưa đăng nhập"}
               </div>
             </div>
-            <button
-              className="chat-panel__close"
-              onClick={() => setOpen(false)}>
+            <button className="chat-panel__close" onClick={() => setOpen(false)}>
               ✕
             </button>
           </div>
 
-          {/* Body */}
           {!isAuth ? (
-            /* Not logged in */
             <div className="chat-not-logged">
               <div className="chat-not-logged__icon">🔐</div>
               <p>Vui lòng đăng nhập để chat với hỗ trợ viên</p>
-              <Link
-                to="/login"
-                className="btn-primary"
-                onClick={() => setOpen(false)}>
+              <Link to="/login" className="btn-primary" onClick={() => setOpen(false)}>
                 Đăng nhập ngay
               </Link>
             </div>
           ) : (
             <>
-              {/* Messages */}
               <div className="chat-panel__messages">
-                {/* Welcome message */}
-                <div
-                  className="chat-msg chat-msg--in"
-                  style={{ maxWidth: "100%" }}>
+                <div className="chat-msg chat-msg--in" style={{ maxWidth: "100%" }}>
                   <div
                     className="chat-msg__bubble"
                     style={{ background: "var(--bg-surface)", fontSize: 13 }}>
@@ -208,17 +198,22 @@ export default function ChatWidget() {
                   </div>
                 </div>
 
+                {/* ✅ FIX: hiện lỗi thay vì im lặng */}
+                {error && (
+                  <div style={{
+                    color: "#e53e3e",
+                    fontSize: 12,
+                    padding: "8px 12px",
+                    textAlign: "center"
+                  }}>
+                    {error}
+                  </div>
+                )}
+
                 {loading ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      padding: 20,
-                    }}>
+                  <div style={{ display: "flex", justifyContent: "center", padding: 20 }}>
                     <div className="chat-loading">
-                      <span />
-                      <span />
-                      <span />
+                      <span /><span /><span />
                     </div>
                   </div>
                 ) : messages.length === 0 ? (
@@ -230,13 +225,9 @@ export default function ChatWidget() {
                   messages.map((msg, i) => (
                     <div
                       key={msg.id || i}
-                      className={`chat-msg ${
-                        msg.isMine ? "chat-msg--out" : "chat-msg--in"
-                      }`}>
+                      className={`chat-msg ${msg.isMine ? "chat-msg--out" : "chat-msg--in"}`}>
                       <div className="chat-msg__bubble">{msg.text}</div>
-                      <div className="chat-msg__time">
-                        {formatTime(msg.time)}
-                      </div>
+                      <div className="chat-msg__time">{formatTime(msg.time)}</div>
                     </div>
                   ))
                 )}
@@ -244,27 +235,20 @@ export default function ChatWidget() {
                 <div ref={bottomRef} />
               </div>
 
-              {/* Input area */}
               <div className="chat-panel__input-area">
                 <textarea
                   ref={inputRef}
                   className="chat-input"
-                  placeholder={
-                    connected ? "Nhập tin nhắn..." : "Đang kết nối..."
-                  }
+                  placeholder={connected ? "Nhập tin nhắn..." : "Đang kết nối..."}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={!connected}
                   rows={1}
-                  style={{
-                    height: "auto",
-                    minHeight: 40,
-                  }}
+                  style={{ height: "auto", minHeight: 40 }}
                   onInput={(e) => {
                     e.target.style.height = "auto";
-                    e.target.style.height =
-                      Math.min(e.target.scrollHeight, 100) + "px";
+                    e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
                   }}
                 />
                 <button
@@ -272,11 +256,7 @@ export default function ChatWidget() {
                   onClick={sendMessage}
                   disabled={!connected || !input.trim()}
                   title="Gửi (Enter)">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path
                       d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"
                       strokeLinecap="round"
@@ -290,20 +270,14 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* Toggle button */}
       <button
         className="chat-toggle-btn"
         onClick={() => setOpen((v) => !v)}
         title="Chat hỗ trợ">
-        {/* Ping ring - only when not open */}
         {!open && <div className="chat-ping" />}
-
-        {/* Unread badge */}
         {!open && unread > 0 && (
           <div className="chat-badge">{unread > 9 ? "9+" : unread}</div>
         )}
-
-        {/* Icon */}
         {open ? (
           <svg viewBox="0 0 24 24" fill="white">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />

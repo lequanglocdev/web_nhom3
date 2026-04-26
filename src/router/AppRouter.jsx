@@ -25,6 +25,7 @@ import UserGuard from "../components/guards/UserGuard";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import UserOrdersPage from "../pages/user/UserOrdersPage";
 import UserProfilePage from "../pages/user/UserProfilePage";
+import AdminChat from "../pages/admin/AdminChat";
 // Wrapper để dùng AdminLayout với <Route element>
 function AdminRoute({ children }) {
   return <AdminLayout>{children}</AdminLayout>;
@@ -137,6 +138,7 @@ export default function AppRouter() {
             </AdminGuard>
           }
         />
+        <Route path="/admin/chat" element={<AdminChat />} />
       </Routes>
     </BrowserRouter>
   );
