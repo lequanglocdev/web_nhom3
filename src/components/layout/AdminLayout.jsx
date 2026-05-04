@@ -100,7 +100,7 @@ export default function AdminLayout({ children }) {
               marginBottom: 12,
             }}>
             <span
-              style={{
+              style={{ 
                 width: 34,
                 height: 34,
                 borderRadius: "50%",
