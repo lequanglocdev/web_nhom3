@@ -1,7 +1,8 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "../common/Navbar";
 import Footer from "../common/Footer";
-import ChatWidget from "../common/ChatWidget";
+// import ChatbotWidget from "../../pages/admin/Chatbotwidget";
+import AdminChat from "../../pages/admin/AdminChat";
 
 export default function MainLayout() {
   return (
@@ -10,8 +11,7 @@ export default function MainLayout() {
       <main className="container">
         <Outlet />
       </main>
-
-      <ChatWidget />
+      <AdminChat />
       <Footer />
     </>
   );

@@ -26,6 +26,7 @@ import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import UserOrdersPage from "../pages/user/UserOrdersPage";
 import UserProfilePage from "../pages/user/UserProfilePage";
 import AdminChat from "../pages/admin/AdminChat";
+// import ChatbotWidget from "../pages/admin/Chatbotwidget";
 // Wrapper để dùng AdminLayout với <Route element>
 function AdminRoute({ children }) {
   return <AdminLayout>{children}</AdminLayout>;
@@ -45,6 +46,7 @@ export default function AppRouter() {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/chat" element={<AdminChat />} />
 
           {/* ── User protected routes ── */}
           <Route
@@ -138,7 +140,6 @@ export default function AppRouter() {
             </AdminGuard>
           }
         />
-        <Route path="/admin/chat" element={<AdminChat />} />
       </Routes>
     </BrowserRouter>
   );

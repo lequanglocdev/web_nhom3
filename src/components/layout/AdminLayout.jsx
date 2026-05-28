@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearAuth, selectUser } from "../../store/authSlice";
 import { logoutApi } from "../../services/authService";
+// import ChatbotWidget from "../../pages/admin/Chatbotwidget";
 import AdminChat from "../../pages/admin/AdminChat";
 
 const menuItems = [
